@@ -34,7 +34,7 @@ defmodule Pinbacker.PathParser do
         {:ok, :username, username}
 
       ["pin", pin_id] ->
-        {:ok, :pin_id, pin_id}
+        {:ok, :pin, pin_id}
 
       [top_level | _]
       when top_level in ["search", "categories", "topics"] ->

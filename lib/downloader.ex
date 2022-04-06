@@ -1,6 +1,14 @@
 defmodule Pinbacker.Downloader do
   @moduledoc """
-  A module that decides what to download based on a job descripton
+  A module that fetches metadata of the Pinterest board/pin
   """
+  alias Pinbacker.HTTP
+  import SweetXml
 
+  def save_pin(%{"id" => _} = pin, location) do
+    url = pin["images"]["orig"]["url"]
+    %URI{path: path} = URI.parse(url)
+    fname = path |> String.split("/") |> Enum.at(-1)
+    HTTP.download!(:img, url, location <> fname)
+  end
 end
