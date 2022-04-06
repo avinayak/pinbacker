@@ -15,4 +15,12 @@ defmodule Pinbacker do
   def hello do
     :world
   end
+
+  def url_to_board_path(url) do
+    url.split("/")[-1]
+  end
+
+  # def fetch_pins(board, directory / "images") do
+
+  # end
 end
