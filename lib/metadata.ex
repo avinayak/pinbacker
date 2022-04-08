@@ -24,7 +24,7 @@ defmodule Pinbacker.Metadata do
     url = "https://www.pinterest.com/#{username}/#{board_name}/"
 
     with {:ok, [[board], _sections]} <- get_sections_and_boards(url) do
-      %{board.id => fetch_board([username, board_name], board, nil, [])}
+      {:ok, board_name ,fetch_board([username, board_name], board, nil, [])}
     else
       error -> error
     end
@@ -34,15 +34,16 @@ defmodule Pinbacker.Metadata do
     url = "https://www.pinterest.com/#{username}/#{board_name}/#{section_name}/"
 
     with {:ok, [_boards, sections]} <- get_sections_and_boards(url) do
-      sections
-      |> Enum.map(fn section ->
-        {section.id,
-         %{
-           pins: fetch_section([username, board_name, section_name], section, nil, []),
-           section_meta: section
-         }}
-      end)
-      |> Map.new()
+      [section] = sections |> Enum.filter(&(&1.slug == section_name))
+      pins = fetch_section([username, board_name, section_name], section, nil, [])
+
+      IO.puts("Found #{length(pins)} pins in #{board_name} #{section_name}..")
+
+      {:ok, board_name, section_name,
+       %{
+         pins: pins,
+         section_meta: section
+       }}
     else
       error -> error
     end
@@ -56,9 +57,6 @@ defmodule Pinbacker.Metadata do
     else
       error -> error
     end
-  end
-
-  def get_boards_by_userlink(url) do
   end
 
   def get_sections_and_boards(url) do

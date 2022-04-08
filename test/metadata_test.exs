@@ -18,7 +18,10 @@ defmodule MetadataTest do
   # end
 
   # test "get section links" do
-  #   assert Metadata.get_links(:section, ["atulvinayak", "sys1", "sys0"]) |> Map.keys() == ["5163293311995261576", "5224888090920805547"]
+  #   {:ok, "sys1", "Logo Mark", %{pins: pins}} =
+  #     Metadata.get_links(:section, ["atulvinayak", "sys1", "Logo Mark"])
+
+  #   assert length(pins) == 26
   # end
 
   # test "get board links" do
@@ -31,7 +34,6 @@ defmodule MetadataTest do
   #   data = Metadata.get_links(:board, ["atulvinayak"])
   #   assert length(data) == 3
   # end
-
 
   # test "section" do
   #   assert Metadata.get_sections_and_boards("https://www.pinterest.com/atulvinayak/sys1/sys0/") ==
