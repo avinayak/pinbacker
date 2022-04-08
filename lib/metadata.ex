@@ -16,22 +16,21 @@ defmodule Pinbacker.Metadata do
     end
   end
 
+  def get_links(:board, [username]) do
+    url = "https://www.pinterest.com/#{username}/"
 
-  # def get_links(:board, [username]) do
-  #   url = "https://www.pinterest.com/#{username}/"
-
-  #   with {:ok, [board, section]} <- get_sections_and_boards(url) do
-  #     fetch_board([username, board_name], [board, section], nil, [])
-  #   else
-  #     error -> error
-  #   end
-  # end
+    # with {:ok, [board, section]} <- get_boards_by_userlink(url) do
+    #   fetch_section([username, board_name], [board, section], nil, [])
+    # else
+    #   error -> error
+    # end
+  end
 
   def get_links(:board, [username, board_name]) do
     url = "https://www.pinterest.com/#{username}/#{board_name}/"
 
-    with {:ok, [board, section]} <- get_sections_and_boards(url) do
-      fetch_board([username, board_name], [board, section], nil, [])
+    with {:ok, [boards, sections]} <- get_sections_and_boards(url) do
+      fetch_section([username, board_name], [boards, sections], nil, [])
     else
       error -> error
     end
@@ -40,8 +39,16 @@ defmodule Pinbacker.Metadata do
   def get_links(:section, [username, board_name, section_name]) do
     url = "https://www.pinterest.com/#{username}/#{board_name}/#{section_name}/"
 
-    with {:ok, [board, section]} <- get_sections_and_boards(url) do
-      fetch_board([username, board_name, section_name], [board, section], nil, [])
+    with {:ok, [_boards, sections]} <- get_sections_and_boards(url) do
+      sections
+      |> Enum.map(fn section ->
+        {section.id,
+         %{
+           pins: fetch_section([username, board_name, section_name], section, nil, []),
+           section_meta: section
+         }}
+      end)
+      |> Map.new()
     else
       error -> error
     end
@@ -55,6 +62,9 @@ defmodule Pinbacker.Metadata do
     else
       error -> error
     end
+  end
+
+  def get_boards_by_userlink(url) do
   end
 
   def get_sections_and_boards(url) do
@@ -118,11 +128,11 @@ defmodule Pinbacker.Metadata do
     }
   end
 
-  def fetch_board(_, _, ["-end-"], data) do
+  def fetch_section(_, _, ["-end-"], data) do
     data
   end
 
-  def fetch_board([username, board_name, section_name], [board, section], bookmark, data) do
+  def fetch_section([username, board_name, section_name], section, bookmark, data) do
     # recursively fetch all the pins for a section
     url = "https://www.pinterest.com/resource/BoardSectionPinsResource/get/"
     source_url = "//%{username}/%{board_name}/%{section.slug}/"
@@ -138,7 +148,7 @@ defmodule Pinbacker.Metadata do
         error -> error
       end
 
-    fetch_board([username, board_name, section_name], [board, section], new_bookmark, new_data)
+    fetch_section([username, board_name, section_name], section, new_bookmark, new_data)
   end
 end
 

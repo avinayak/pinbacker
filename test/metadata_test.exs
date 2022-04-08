@@ -17,6 +17,10 @@ defmodule MetadataTest do
   #            }
   # end
 
+  test "get section links" do
+    assert Metadata.get_links(:section, ["atulvinayak", "sys1", "sys0"]) |> Map.keys() == ["5163293311995261576", "5224888090920805547"]
+  end
+
   test "section" do
     assert Metadata.get_sections_and_boards("https://www.pinterest.com/atulvinayak/sys1/sys0/") ==
              {
