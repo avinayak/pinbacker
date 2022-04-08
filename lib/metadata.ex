@@ -17,13 +17,7 @@ defmodule Pinbacker.Metadata do
   end
 
   def get_links(:board, [username]) do
-    url = "https://www.pinterest.com/#{username}/"
-
-    # with {:ok, [board, section]} <- get_boards_by_userlink(url) do
-    #   fetch_section([username, board_name], [board, section], nil, [])
-    # else
-    #   error -> error
-    # end
+    fetch_user([username], nil, [])
   end
 
   def get_links(:board, [username, board_name]) do
@@ -201,6 +195,57 @@ defmodule Pinbacker.Metadata do
       end
 
     fetch_board([username, board_name], board, new_bookmark, new_data)
+  end
+
+  defp user_link_query_params(bookmark, uname) do
+    options = %{
+      "isPrefetch" => false,
+      "privacy_filter" => "all",
+      "sort" => "alphabetical",
+      "field_set_key" => "profile_grid_item",
+      "username" => uname,
+      "page_size" => 25,
+      "group_by" => "visibility",
+      "include_archived" => true,
+      "redux_normalize_feed" => true
+    }
+
+    options =
+      case bookmark do
+        nil -> options
+        bm -> Map.merge(options, %{"bookmarks" => [bm]})
+      end
+
+    %{
+      "source_url" => uname,
+      "data" =>
+        JSON.encode!(%{
+          "options" => options,
+          "context" => %{}
+        })
+    }
+  end
+
+  def fetch_user(_, ["-end-"], data) do
+    data
+  end
+
+  def fetch_user([username], bookmark, data) do
+    url = "https://www.pinterest.com/resource/BoardsResource/get/"
+
+    params = user_link_query_params(bookmark, username)
+
+    {:ok, new_data, new_bookmark} =
+      with {:ok, json_string} <- HTTP.get(:img, url, params),
+           {:ok, json} <- JSON.decode(json_string) do
+        new_data = json["resource_response"]["data"] ++ data
+        new_bookmark = json["resource"]["options"]["bookmarks"]
+        {:ok, new_data, new_bookmark}
+      else
+        error -> error
+      end
+
+    fetch_user([username], new_bookmark, new_data)
   end
 end
 

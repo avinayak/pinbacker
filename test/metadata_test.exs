@@ -27,55 +27,61 @@ defmodule MetadataTest do
   #   assert data[board_id] |> length == 469
   # end
 
-  test "section" do
-    assert Metadata.get_sections_and_boards("https://www.pinterest.com/atulvinayak/sys1/sys0/") ==
-             {
-               :ok,
-               [
-                 [
-                   %{
-                     id: "407083322507603634",
-                     name: "Sys1",
-                     section_count: 2,
-                     url: "/atulvinayak/sys1/"
-                   }
-                 ],
-                 [
-                   %{
-                     id: "5163293311995261576",
-                     slug: "sys0",
-                     title: "Sys0"
-                   },
-                   %{
-                     id: "5224888090920805547",
-                     slug: "logo-mark",
-                     title: "Logo Mark"
-                   }
-                 ]
-               ]
-             }
-  end
+  #  test "get user boards" do
+  #   data = Metadata.get_links(:board, ["atulvinayak"])
+  #   assert length(data) == 3
+  # end
 
-  test "board" do
-    username = "atulvinayak"
-    board_name = "sys2"
 
-    assert Metadata.get_sections_and_boards(
-             "https://www.pinterest.com/#{username}/#{board_name}/"
-           ) ==
-             {
-               :ok,
-               [
-                 [
-                   %{
-                     id: "407083322507658424",
-                     name: "Sys2",
-                     section_count: 0,
-                     url: "/atulvinayak/sys2/"
-                   }
-                 ],
-                 []
-               ]
-             }
-  end
+  # test "section" do
+  #   assert Metadata.get_sections_and_boards("https://www.pinterest.com/atulvinayak/sys1/sys0/") ==
+  #            {
+  #              :ok,
+  #              [
+  #                [
+  #                  %{
+  #                    id: "407083322507603634",
+  #                    name: "Sys1",
+  #                    section_count: 2,
+  #                    url: "/atulvinayak/sys1/"
+  #                  }
+  #                ],
+  #                [
+  #                  %{
+  #                    id: "5163293311995261576",
+  #                    slug: "sys0",
+  #                    title: "Sys0"
+  #                  },
+  #                  %{
+  #                    id: "5224888090920805547",
+  #                    slug: "logo-mark",
+  #                    title: "Logo Mark"
+  #                  }
+  #                ]
+  #              ]
+  #            }
+  # end
+
+  # test "board" do
+  #   username = "atulvinayak"
+  #   board_name = "sys2"
+
+  #   assert Metadata.get_sections_and_boards(
+  #            "https://www.pinterest.com/#{username}/#{board_name}/"
+  #          ) ==
+  #            {
+  #              :ok,
+  #              [
+  #                [
+  #                  %{
+  #                    id: "407083322507658424",
+  #                    name: "Sys2",
+  #                    section_count: 0,
+  #                    url: "/atulvinayak/sys2/"
+  #                  }
+  #                ],
+  #                []
+  #              ]
+  #            }
+  # end
 end
