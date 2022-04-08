@@ -3,24 +3,33 @@ defmodule Pinbacker.Downloader do
   A module that fetches metadata of the Pinterest board/pin
   """
   alias Pinbacker.HTTP
+  use Retry.Annotation
 
   def save_pins(pins, directory) do
     pins
     |> Enum.map(&save_pin(&1, directory))
   end
 
-  def save_pin(%{"images" => images}, location) do
-    url = images["orig"]["url"]
-    %URI{path: path} = URI.parse(url)
-    fname = path |> String.split("/") |> Enum.at(-1)
+  @retry with: exponential_backoff() |> randomize |> expiry(20_000)
+  def save_pin(pin, location) do
+    case pin do
+      %{"images" => images} ->
+        url = images["orig"]["url"]
+        %URI{path: path} = URI.parse(url)
+        fname = path |> String.split("/") |> Enum.at(-1)
 
-    IO.puts("saving pin " <> fname <> " to " <> location)
+        try do
+          HTTP.download!(:img, url, location <> fname)
+        rescue
+          e ->
+            IO.puts("Failed to download #{url}")
+            IO.puts(e)
+        end
 
-    HTTP.download!(:img, url, location <> fname)
-    {:ok, fname}
-  end
+        {:ok, fname}
 
-  def save_pin(_, _) do
-    {:error, "Unsupported file format"}
+      _ ->
+        {:error, "Unsupported file format"}
+    end
   end
 end

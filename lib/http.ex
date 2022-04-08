@@ -79,18 +79,19 @@ defmodule Pinbacker.HTTP do
   end
 
   def download!(header_version, file_url, filename) do
-    file =
-      if File.exists?(filename) do
-        File.open!(filename, [:append])
-      else
-        File.touch!(filename)
-        File.open!(filename, [:append])
-      end
+    if File.exists?(filename) do
+      # File.open!(filename, [:append])
+      IO.write("e")
+    else
+      File.touch!(filename)
+      file = File.open!(filename, [:append])
+      IO.write("*")
 
-    %HTTPoison.AsyncResponse{id: ref} =
-      HTTPoison.get!(file_url, headers(header_version), stream_to: self())
+      %HTTPoison.AsyncResponse{id: ref} =
+        HTTPoison.get!(file_url, headers(header_version), stream_to: self())
 
-    append_loop(ref, file)
+      append_loop(ref, file)
+    end
   end
 
   defp append_loop(ref, file) do
@@ -100,14 +101,9 @@ defmodule Pinbacker.HTTP do
         append_loop(ref, file)
 
       %HTTPoison.AsyncEnd{id: ^ref} ->
-        File.close(file)
+        {:ok, File.close(file)}
 
-      # need something to handle errors like request timeout and such
-      # otherwise it will loop forever
-      # don't know what httpoison returns in case of an error ...
-      # you can inspect `_other` below to find out
-      # and match on the error to exit the loop early
-      _other ->
+      _ ->
         append_loop(ref, file)
     end
   end
