@@ -68,25 +68,27 @@ defmodule Pinbacker.HTTP do
     ]
   end
 
-  def get(header_version, url) do
-    case HTTPoison.get(url, headers(header_version)) do
+  def get(header_version, url, query \\ %{}) do
+    case HTTPoison.get(url, headers(header_version), follow_redirect: true, params: query) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
         {:ok, body}
 
-      _ ->
-        {:error, "HTTP.get failed"}
+      error ->
+        {:error, "HTTP.get failed", error}
     end
   end
 
   def download!(header_version, file_url, filename) do
-    file = if File.exists?(filename) do
-      File.open!(filename, [:append])
-    else
-      File.touch!(filename)
-      File.open!(filename, [:append])
-    end
+    file =
+      if File.exists?(filename) do
+        File.open!(filename, [:append])
+      else
+        File.touch!(filename)
+        File.open!(filename, [:append])
+      end
 
-    %HTTPoison.AsyncResponse{id: ref} = HTTPoison.get!(file_url, headers(header_version), stream_to: self())
+    %HTTPoison.AsyncResponse{id: ref} =
+      HTTPoison.get!(file_url, headers(header_version), stream_to: self())
 
     append_loop(ref, file)
   end
@@ -96,8 +98,10 @@ defmodule Pinbacker.HTTP do
       %HTTPoison.AsyncChunk{chunk: chunk, id: ^ref} ->
         IO.binwrite(file, chunk)
         append_loop(ref, file)
+
       %HTTPoison.AsyncEnd{id: ^ref} ->
         File.close(file)
+
       # need something to handle errors like request timeout and such
       # otherwise it will loop forever
       # don't know what httpoison returns in case of an error ...
@@ -107,5 +111,4 @@ defmodule Pinbacker.HTTP do
         append_loop(ref, file)
     end
   end
-
 end
