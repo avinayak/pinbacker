@@ -86,8 +86,8 @@ defmodule Pinbacker.Metadata do
          section_meta: section
        }}
     else
-      {:error, e} ->
-        {:error, e}
+      {:error, error} ->
+        {:error, error}
     end
   end
 
@@ -142,23 +142,21 @@ defmodule Pinbacker.Metadata do
   end
 
   defp wrap_query_params(options, bookmark) do
-    options =
-      case bookmark do
-        nil -> options
-        bm -> Map.merge(options, %{"bookmarks" => [bm]})
-      end
-
     %{
       "data" =>
         JSON.encode!(%{
-          "options" => options,
+          "options" =>
+            case bookmark do
+              nil -> options
+              bm -> Map.merge(options, %{"bookmarks" => [bm]})
+            end,
           "context" => %{}
         })
     }
   end
 
-  defp query_params(bookmark, %{type: :board} = board) do
-    options = %{
+  defp query_params(%{type: :board} = board) do
+    %{
       "isPrefetch" => false,
       "field_set_key" => "react_grid_pin",
       "is_own_profile_pins" => false,
@@ -169,12 +167,10 @@ defmodule Pinbacker.Metadata do
       "filter_section_pins" => true,
       "layout" => "default"
     }
-
-    wrap_query_params(options, bookmark)
   end
 
-  defp query_params(bookmark, %{type: :section} = section) do
-    options = %{
+  defp query_params(%{type: :section} = section) do
+    %{
       "isPrefetch" => false,
       "field_set_key" => "react_grid_pin",
       "is_own_profile_pins" => false,
@@ -182,12 +178,10 @@ defmodule Pinbacker.Metadata do
       "redux_normalize_feed" => true,
       "section_id" => section.id
     }
-
-    wrap_query_params(options, bookmark)
   end
 
-  defp query_params(bookmark, uname) do
-    options = %{
+  defp query_params(uname) do
+    %{
       "isPrefetch" => false,
       "privacy_filter" => "all",
       "sort" => "alphabetical",
@@ -198,8 +192,6 @@ defmodule Pinbacker.Metadata do
       "include_archived" => true,
       "redux_normalize_feed" => true
     }
-
-    wrap_query_params(options, bookmark)
   end
 
   def fetch_pins(_, _, ["-end-"], data) do
@@ -207,7 +199,7 @@ defmodule Pinbacker.Metadata do
   end
 
   def fetch_pins(url, section, bookmark, data) do
-    params = query_params(bookmark, section)
+    params = query_params(section) |> wrap_query_params(bookmark)
 
     {:ok, new_data, new_bookmark} =
       with {:ok, json_string} <- HTTP.get(:img, url, params),

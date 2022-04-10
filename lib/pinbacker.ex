@@ -67,8 +67,4 @@ defmodule Pinbacker do
         Logger.info("Error: #{message}")
     end
   end
-
-  # def fetch_pins(board, directory / "images") do
-
-  # end
 end
