@@ -58,23 +58,26 @@ defmodule Pinbacker do
     IO.puts("saving pins from board to " <> save_location)
     File.mkdir_p!(Path.dirname(save_location))
 
-    {:ok, board_name, pins} = Metadata.get_links(:board, board_path)
+    with {:ok, board_name, pins} <- Metadata.get_links(:board, board_path) do
+      Downloader.save_pins(pins.board_pins, save_location)
 
-    Downloader.save_pins(pins.board_pins, save_location)
+      pins.section_pins
+      |> Enum.map(fn {section_name, section_pins} ->
+        section_dirname = Utils.directory_tree(save_location, [section_name])
+        File.mkdir_p!(section_dirname)
 
-    pins.section_pins
-    |> Enum.map(fn {section_name, section_pins} ->
-      section_dirname = Utils.directory_tree(save_location, [section_name])
-      File.mkdir_p!(section_dirname)
+        IO.puts(
+          "saving pins from board.section #{board_name}.#{section_name} to " <> section_dirname
+        )
 
-      IO.puts(
-        "saving pins from board.section #{board_name}.#{section_name} to " <> section_dirname
-      )
+        Downloader.save_pins(section_pins, section_dirname)
+      end)
 
-      Downloader.save_pins(section_pins, save_location)
-    end)
-
-    pins.section_pins
+      pins.section_pins
+    else
+      {:error, message} ->
+        IO.puts("Error: #{message}")
+    end
   end
 
   # def fetch_pins(board, directory / "images") do

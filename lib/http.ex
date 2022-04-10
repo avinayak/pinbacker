@@ -73,19 +73,19 @@ defmodule Pinbacker.HTTP do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
         {:ok, body}
 
-      error ->
-        {:error, "HTTP.get failed", error}
+      {:error, error} ->
+        {:error, error}
     end
   end
 
   def download!(header_version, file_url, filename) do
     if File.exists?(filename) do
       # File.open!(filename, [:append])
-      IO.write("e")
+      IO.write("File Exists #{filename}")
     else
       File.touch!(filename)
       file = File.open!(filename, [:append])
-      IO.write("*")
+      IO.puts("Downloading to #{filename}")
 
       %HTTPoison.AsyncResponse{id: ref} =
         HTTPoison.get!(file_url, headers(header_version), stream_to: self())

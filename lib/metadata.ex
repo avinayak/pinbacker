@@ -3,7 +3,7 @@ defmodule Pinbacker.Metadata do
   A module that fetches metadata of the Pinterest board/pin
   """
 
-  alias Pinbacker.{HTTP, Utils}
+  alias Pinbacker.HTTP
 
   def fetch_script_with_json(url) do
     with {:ok, body} <- HTTP.get(:pin, url),
@@ -12,11 +12,9 @@ defmodule Pinbacker.Metadata do
          {:ok, react_state} <- JSON.decode(script) do
       {:ok, react_state}
     else
-      e -> {:error, e}
+      {:error, error} -> {:error, error}
     end
   end
-
-
 
   def board_slug(url) do
     url |> String.trim("/") |> String.split("/") |> Enum.at(-1)
@@ -24,37 +22,43 @@ defmodule Pinbacker.Metadata do
 
   def get_links(:username, [username]) do
     boards = fetch_user([username], nil, [])
-    Enum.map(boards, &Map.put(&1, "slug", board_slug(Map.get(&1, "url") )))
+    Enum.map(boards, &Map.put(&1, "slug", board_slug(Map.get(&1, "url"))))
   end
 
   def get_links(:board, [username, board_name]) do
-    IO.inspect(board_name)
     url = "https://www.pinterest.com/#{username}/#{board_name}/"
 
     with {:ok, [boards, sections]} <- get_sections_and_boards(url) do
-
-      [board] =
+      board =
         boards
-        |> Enum.filter(
-          &(board_slug(&1.url) == board_name and String.contains?(&1.url, username))
-        )
-
+        |> Enum.filter(&(board_slug(&1.url) == board_name))
+        |> Enum.at(0)
 
       section_pins =
         sections
         |> Enum.map(fn section ->
-          {section.slug, fetch_section([username, board_name, section.slug], section, nil, [])}
+          {section.slug,
+           fetch_section([username, board_name, section.slug], section, nil, [])
+           |> Enum.filter(&(&1["type"] == "pin"))}
         end)
         |> Map.new()
 
-      {:ok, board_name,
-       %{
-         board_pins: fetch_board([username, board_name], board, nil, []),
-         section_pins: section_pins,
-         section_metadata: sections
-       }}
+      case board do
+        nil ->
+          {:error, "Board not found"}
+
+        _ ->
+          {:ok, board_name,
+           %{
+             board_pins:
+               fetch_board([username, board_name], board, nil, [])
+               |> Enum.filter(&(&1["type"] == "pin")),
+             section_pins: section_pins,
+             section_metadata: sections
+           }}
+      end
     else
-      e -> {:error, e}
+      {:error, error} -> {:error, error}
     end
   end
 
@@ -63,7 +67,10 @@ defmodule Pinbacker.Metadata do
 
     with {:ok, [_boards, sections]} <- get_sections_and_boards(url) do
       [section] = sections |> Enum.filter(&(&1.slug == section_name))
-      pins = fetch_section([username, board_name, section_name], section, nil, [])
+
+      pins =
+        fetch_section([username, board_name, section_name], section, nil, [])
+        |> Enum.filter(&(&1["type"] == "pin"))
 
       IO.puts("Found #{length(pins)} pins in #{board_name} #{section_name}..")
 
@@ -73,7 +80,7 @@ defmodule Pinbacker.Metadata do
          section_meta: section
        }}
     else
-      e ->
+      {:error, e} ->
         {:error, e}
     end
   end
@@ -84,7 +91,7 @@ defmodule Pinbacker.Metadata do
     with {:ok, react_state} <- fetch_script_with_json(url) do
       react_state["props"]["initialReduxState"]["pins"][pin_id]
     else
-      e -> {:error, e}
+      {:error, error} -> {:error, error}
     end
   end
 
@@ -119,7 +126,7 @@ defmodule Pinbacker.Metadata do
 
       {:ok, [boards_metadata, sections_metadata]}
     else
-      e -> {:error, e}
+      {:error, error} -> {:error, error}
     end
   end
 
@@ -166,7 +173,7 @@ defmodule Pinbacker.Metadata do
         new_bookmark = json["resource"]["options"]["bookmarks"]
         {:ok, new_data, new_bookmark}
       else
-        e -> {:error, e}
+        {:error, error} -> {:error, error}
       end
 
     IO.write(".")
@@ -219,7 +226,7 @@ defmodule Pinbacker.Metadata do
         new_bookmark = json["resource"]["options"]["bookmarks"]
         {:ok, new_data, new_bookmark}
       else
-        e -> {:error, e}
+        {:error, error} -> {:error, error}
       end
 
     IO.write(".")
@@ -271,7 +278,7 @@ defmodule Pinbacker.Metadata do
         new_bookmark = json["resource"]["options"]["bookmarks"]
         {:ok, new_data, new_bookmark}
       else
-        e -> {:error, e}
+        {:error, error} -> {:error, error}
       end
 
     IO.write(".")

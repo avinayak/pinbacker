@@ -18,14 +18,7 @@ defmodule Pinbacker.Downloader do
         %URI{path: path} = URI.parse(url)
         fname = path |> String.split("/") |> Enum.at(-1)
 
-        try do
-          HTTP.download!(:img, url, location <> fname)
-        rescue
-          e ->
-            IO.puts("Failed to download #{url}")
-            IO.puts(e)
-        end
-
+        HTTP.download!(:img, url, location <> fname)
         {:ok, fname}
 
       _ ->
