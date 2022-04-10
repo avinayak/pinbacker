@@ -19,13 +19,12 @@ defmodule Pinbacker do
 
         Logger.info("Found #{length(boards)} boards for #{username}..")
 
-        Enum.map(
-          boards,
-          &download_board([username, Map.get(&1, "slug")], parent)
-        )
+        for board <- boards do
+          download_board([username, Map.get(board, "slug")], parent)
+        end
 
       _ ->
-        "Unsupported URL"
+        Logger.error("Unsupported URL")
     end
 
     Logger.info("Done")
@@ -46,23 +45,23 @@ defmodule Pinbacker do
     Logger.info("Saving pins from board to " <> save_location)
     File.mkdir_p!(Path.dirname(save_location))
 
-    with {:ok, board_name, pins} <- Metadata.get_links(:board, board_path) do
-      Downloader.save_pins(pins.board_pins, save_location)
+    case Metadata.get_links(:board, board_path) do
+      {:ok, board_name, pins} ->
+        Downloader.save_pins(pins.board_pins, save_location)
 
-      pins.section_pins
-      |> Enum.map(fn {section_name, section_pins} ->
-        section_dirname = Utils.directory_tree(save_location, [section_name])
-        File.mkdir_p!(section_dirname)
+        for {section_name, section_pins} <- pins.section_pins do
+          section_dirname = Utils.directory_tree(save_location, [section_name])
+          File.mkdir_p!(section_dirname)
 
-        Logger.info(
-          "Saving pins from board.section #{board_name}.#{section_name} to " <> section_dirname
-        )
+          Logger.info(
+            "Saving pins from board.section #{board_name}.#{section_name} to " <> section_dirname
+          )
 
-        Downloader.save_pins(section_pins, section_dirname)
-      end)
+          Downloader.save_pins(section_pins, section_dirname)
+        end
 
-      pins.section_pins
-    else
+        pins.section_pins
+
       {:error, message} ->
         Logger.info("Error: #{message}")
     end

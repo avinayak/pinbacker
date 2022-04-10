@@ -26,6 +26,22 @@ defmodule Pinbacker.Metadata do
     url |> String.trim("/") |> String.split("/") |> Enum.at(-1)
   end
 
+  def fetch_board_pins(board, section_pins) do
+    case board do
+      nil ->
+        {:error, "Board not found"}
+
+      _ ->
+        {:ok, board.name,
+         %{
+           board_pins:
+             fetch_pins(@board_meta_enpoint, board, nil, [])
+             |> Enum.filter(&(&1["type"] == "pin")),
+           section_pins: section_pins
+         }}
+    end
+  end
+
   def get_links(:username, [username]) do
     boards = fetch_pins(@user_meta_endpoint, [username], nil, [])
     Enum.map(boards, &Map.put(&1, "slug", board_slug(Map.get(&1, "url"))))
@@ -34,58 +50,49 @@ defmodule Pinbacker.Metadata do
   def get_links(:board, [username, board_name]) do
     url = "https://www.pinterest.com/#{username}/#{board_name}/"
 
-    with {:ok, [boards, sections]} <- get_sections_and_boards(url) do
-      board =
-        boards
-        |> Enum.filter(&(board_slug(&1.url) == board_name))
-        |> Enum.at(0)
+    case get_sections_and_boards(url) do
+      {:ok, [boards, sections]} ->
+        board =
+          boards
+          |> Enum.filter(&(board_slug(&1.url) == board_name))
+          |> Enum.at(0)
+          |> Map.put(:name, board_name)
 
-      section_pins =
-        sections
-        |> Enum.map(fn section ->
-          {section.slug,
-           fetch_pins(@section_meta_endpoint, section, nil, [])
-           |> Enum.filter(&(&1["type"] == "pin"))}
-        end)
-        |> Map.new()
+        section_pins =
+          sections
+          |> Enum.map(fn section ->
+            {section.slug,
+             fetch_pins(@section_meta_endpoint, section, nil, [])
+             |> Enum.filter(&(&1["type"] == "pin"))}
+          end)
+          |> Map.new()
 
-      case board do
-        nil ->
-          {:error, "Board not found"}
+        fetch_board_pins(board, section_pins)
 
-        _ ->
-          {:ok, board_name,
-           %{
-             board_pins:
-               fetch_pins(@board_meta_enpoint, board, nil, [])
-               |> Enum.filter(&(&1["type"] == "pin")),
-             section_pins: section_pins,
-             section_metadata: sections
-           }}
-      end
-    else
-      {:error, error} -> {:error, error}
+      {:error, error} ->
+        {:error, error}
     end
   end
 
   def get_links(:section, [username, board_name, section_name]) do
     url = "https://www.pinterest.com/#{username}/#{board_name}/#{section_name}/"
 
-    with {:ok, [_boards, sections]} <- get_sections_and_boards(url) do
-      [section] = sections |> Enum.filter(&(&1.slug == section_name))
+    case get_sections_and_boards(url) do
+      {:ok, [_boards, sections]} ->
+        [section] = sections |> Enum.filter(&(&1.slug == section_name))
 
-      pins =
-        fetch_pins(@section_meta_endpoint, section, nil, [])
-        |> Enum.filter(&(&1["type"] == "pin"))
+        pins =
+          fetch_pins(@section_meta_endpoint, section, nil, [])
+          |> Enum.filter(&(&1["type"] == "pin"))
 
-      Logger.info("Found #{length(pins)} pins in #{board_name} #{section_name}..")
+        Logger.info("Found #{length(pins)} pins in #{board_name} #{section_name}..")
 
-      {:ok, board_name, section_name,
-       %{
-         pins: pins,
-         section_meta: section
-       }}
-    else
+        {:ok, board_name, section_name,
+         %{
+           pins: pins,
+           section_meta: section
+         }}
+
       {:error, error} ->
         {:error, error}
     end
@@ -94,9 +101,8 @@ defmodule Pinbacker.Metadata do
   def get_links(:pin, pin_id) do
     url = "https://www.pinterest.com/pin/#{pin_id}/"
 
-    with {:ok, react_state} <- fetch_script_with_json(url) do
-      react_state["props"]["initialReduxState"]["pins"][pin_id]
-    else
+    case fetch_script_with_json(url) do
+      {:ok, react_state} -> react_state["props"]["initialReduxState"]["pins"][pin_id]
       {:error, error} -> {:error, error}
     end
   end
