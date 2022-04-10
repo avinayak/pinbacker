@@ -11,6 +11,18 @@ defmodule PinbackerTest do
     assert Utils.directory_tree("root/", ["a", "b", "c"]) == "root/a/b/c/"
   end
 
+  test "single pin download" do
+    File.rm_rf!(@download_base)
+    destination = "#{@download_base}"
+    Pinbacker.fetch("https://www.pinterest.jp/pin/1090152653523652586/", destination)
+
+    assert Utils.list_all_files(destination) == [
+             "test/downloads/0a0c0c1b938b5f1334f6581d99683274.jpg"
+           ]
+
+    File.rm_rf!(@download_base)
+  end
+
   test "section download" do
     File.rm_rf!(@download_base)
     destination = "#{@download_base}/section"

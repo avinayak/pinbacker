@@ -105,7 +105,7 @@ defmodule Pinbacker.Metadata do
     url = "https://www.pinterest.com/pin/#{pin_id}/"
 
     case fetch_script_with_json(url) do
-      {:ok, react_state} -> react_state["props"]["initialReduxState"]["pins"][pin_id]
+      {:ok, react_state} -> {:ok, react_state["props"]["initialReduxState"]["pins"][pin_id]}
       {:error, error} -> {:error, error}
     end
   end

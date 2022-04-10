@@ -59,10 +59,10 @@ defmodule Pinbacker.PathParser do
   end
 
   def parse(path) do
-    with %URI{path: slash_path, host: host} <- parse_uri(path),
+    with %URI{path: slash_path} <- parse_uri(path),
          {:ok, parts} <- get_parts(slash_path),
          {:ok, job, pin_source} <- parse_job_type(parts) do
-      {:ok, job, pin_source, host}
+      {:ok, job, pin_source}
     else
       err -> err
     end

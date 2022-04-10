@@ -5,7 +5,9 @@ defmodule MetadataTest do
   alias Pinbacker.Metadata
 
   test "get pin links" do
-    assert Metadata.get_links(:pin, "207517495320779226")
+    {:ok, links} = Metadata.get_links(:pin, "207517495320779226")
+
+    assert links
            |> Map.get("images")
            |> Map.get("orig") ==
              %{
