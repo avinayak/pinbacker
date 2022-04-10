@@ -20,10 +20,11 @@ end
 To save all the pins by user atulsvinayak to Downloads, Simply run
 
 ```elixir
-Pinbacker.fetch("https://www.pinterest.jp/atulsvinayak/_saved/", "~/Downloads")
+Pinbacker.fetch("https://www.pinterest.jp/atulsvinayak/", "~/Downloads")
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/pinbacker](https://hexdocs.pm/pinbacker).
+Pinbacker accepts these Pintrest URL formats:
+  * `https://www.pinterest.com/<username>/`
+  * `https://www.pinterest.com/<username>/<board_name>/`
+  * `https://www.pinterest.com/<username>/<board_name>/<section_name>`
 
