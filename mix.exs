@@ -8,7 +8,25 @@ defmodule Pinbacker.MixProject do
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       escript: [main_module: Pinbacker.CLI],
-      deps: deps()
+      deps: deps(),
+      description: description(),
+      package: package(),
+      source_url: "https://github.com/avinayak/pinbacker"
+    ]
+  end
+
+  defp description do
+    """
+    An Elixir library/CLI to backup your Pintrest pins
+    """
+  end
+
+  defp package do
+    [
+      name: "pinbacker",
+      licenses: ["MIT"],
+      contributors: ["Atul Vinayak"],
+      links: %{"GitHub" => "https://github.com/avinayak/pinbacker"}
     ]
   end
 
@@ -28,7 +46,8 @@ defmodule Pinbacker.MixProject do
       {:json, "~> 1.4.1"},
       {:httpoison, "~> 1.8"},
       {:retry, "~> 0.15"},
-      {:credo, "~> 1.6", only: [:dev, :test], runtime: false}
+      {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
+      {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
     ]
   end
 end
