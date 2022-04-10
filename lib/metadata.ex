@@ -7,6 +7,8 @@ defmodule Pinbacker.Metadata do
 
   require Logger
 
+  @section_meta_endpoint "https://www.pinterest.com/resource/BoardSectionPinsResource/get/"
+
   def fetch_script_with_json(url) do
     with {:ok, body} <- HTTP.get(:pin, url),
          {:ok, document} <- Floki.parse_document(body),
@@ -40,7 +42,7 @@ defmodule Pinbacker.Metadata do
         sections
         |> Enum.map(fn section ->
           {section.slug,
-           fetch_section([username, board_name, section.slug], section, nil, [])
+           fetch_pins(@section_meta_endpoint, section, nil, [])
            |> Enum.filter(&(&1["type"] == "pin"))}
         end)
         |> Map.new()
@@ -71,7 +73,7 @@ defmodule Pinbacker.Metadata do
       [section] = sections |> Enum.filter(&(&1.slug == section_name))
 
       pins =
-        fetch_section([username, board_name, section_name], section, nil, [])
+        fetch_pins(@section_meta_endpoint, section, nil, [])
         |> Enum.filter(&(&1["type"] == "pin"))
 
       Logger.info("Found #{length(pins)} pins in #{board_name} #{section_name}..")
@@ -98,51 +100,46 @@ defmodule Pinbacker.Metadata do
   end
 
   def get_sections_and_boards(url) do
-    with {:ok, react_state} <- fetch_script_with_json(url) do
-      parent = react_state["props"]["initialReduxState"]
-      boards = parent["boards"]
-      sections = parent["boardsections"]
+    case fetch_script_with_json(url) do
+      {:ok, react_state} ->
+        parent = react_state["props"]["initialReduxState"]
+        boards = parent["boards"]
+        sections = parent["boardsections"]
 
-      boards_metadata =
-        boards
-        |> Map.keys()
-        |> Enum.filter(fn board_id -> !is_nil(boards[board_id]["collaborating_users"]) end)
-        |> Enum.map(
-          &%{
-            url: boards[&1]["url"],
-            id: &1,
-            name: boards[&1]["name"],
-            section_count: boards[&1]["section_count"]
-          }
-        )
+        boards_metadata =
+          boards
+          |> Map.keys()
+          |> Enum.filter(fn board_id -> !is_nil(boards[board_id]["collaborating_users"]) end)
+          |> Enum.map(
+            &%{
+              url: boards[&1]["url"],
+              id: &1,
+              name: boards[&1]["name"],
+              section_count: boards[&1]["section_count"],
+              type: :board
+            }
+          )
 
-      sections_metadata =
-        sections
-        |> Map.keys()
-        |> Enum.map(
-          &%{
-            id: &1,
-            title: sections[&1]["title"],
-            slug: sections[&1]["slug"]
-          }
-        )
+        sections_metadata =
+          sections
+          |> Map.keys()
+          |> Enum.map(
+            &%{
+              id: &1,
+              title: sections[&1]["title"],
+              slug: sections[&1]["slug"],
+              type: :section
+            }
+          )
 
-      {:ok, [boards_metadata, sections_metadata]}
-    else
-      {:error, error} -> {:error, error}
+        {:ok, [boards_metadata, sections_metadata]}
+
+      {:error, error} ->
+        {:error, error}
     end
   end
 
-  defp section_links_query_params(bookmark, section, source_url) do
-    options = %{
-      "isPrefetch" => false,
-      "field_set_key" => "react_grid_pin",
-      "is_own_profile_pins" => false,
-      "page_size" => 25,
-      "redux_normalize_feed" => true,
-      "section_id" => section.id
-    }
-
+  defp wrap_query_params(options, bookmark) do
     options =
       case bookmark do
         nil -> options
@@ -150,7 +147,6 @@ defmodule Pinbacker.Metadata do
       end
 
     %{
-      "source_url" => source_url,
       "data" =>
         JSON.encode!(%{
           "options" => options,
@@ -159,15 +155,12 @@ defmodule Pinbacker.Metadata do
     }
   end
 
-  def fetch_section(_, _, ["-end-"], data) do
+  def fetch_pins(_, _, ["-end-"], data) do
     data
   end
 
-  def fetch_section([username, board_name, section_name], section, bookmark, data) do
-    # recursively fetch all the pins for a section
-    url = "https://www.pinterest.com/resource/BoardSectionPinsResource/get/"
-    source_url = "//#{username}/#{board_name}/#{section.slug}/"
-    params = section_links_query_params(bookmark, section, source_url)
+  def fetch_pins(url, section, bookmark, data) do
+    params = query_params(bookmark, section)
 
     {:ok, new_data, new_bookmark} =
       with {:ok, json_string} <- HTTP.get(:img, url, params),
@@ -179,11 +172,10 @@ defmodule Pinbacker.Metadata do
         {:error, error} -> {:error, error}
       end
 
-    IO.write(".")
-    fetch_section([username, board_name, section_name], section, new_bookmark, new_data)
+    fetch_pins(url, section, new_bookmark, new_data)
   end
 
-  defp board_links_query_params(bookmark, board, source_url) do
+  defp query_params(bookmark, %{type: :board} = board) do
     options = %{
       "isPrefetch" => false,
       "field_set_key" => "react_grid_pin",
@@ -196,47 +188,23 @@ defmodule Pinbacker.Metadata do
       "layout" => "default"
     }
 
-    options =
-      case bookmark do
-        nil -> options
-        bm -> Map.merge(options, %{"bookmarks" => [bm]})
-      end
+    wrap_query_params(options, bookmark)
+  end
 
-    %{
-      "source_url" => source_url,
-      "data" =>
-        JSON.encode!(%{
-          "options" => options,
-          "context" => %{}
-        })
+  defp query_params(bookmark, %{type: :section} = section) do
+    options = %{
+      "isPrefetch" => false,
+      "field_set_key" => "react_grid_pin",
+      "is_own_profile_pins" => false,
+      "page_size" => 25,
+      "redux_normalize_feed" => true,
+      "section_id" => section.id
     }
+
+    wrap_query_params(options, bookmark)
   end
 
-  def fetch_board(_, _, ["-end-"], data) do
-    data
-  end
-
-  def fetch_board([username, board_name], board, bookmark, data) do
-    # recursively fetch all the pins for a section
-    url = "https://www.pinterest.com/resource/BoardFeedResource/get/"
-    source_url = "//#{username}/#{board_name}/"
-    params = board_links_query_params(bookmark, board, source_url)
-
-    {:ok, new_data, new_bookmark} =
-      with {:ok, json_string} <- HTTP.get(:img, url, params),
-           {:ok, json} <- JSON.decode(json_string) do
-        new_data = json["resource_response"]["data"] ++ data
-        new_bookmark = json["resource"]["options"]["bookmarks"]
-        {:ok, new_data, new_bookmark}
-      else
-        {:error, error} -> {:error, error}
-      end
-
-    IO.write(".")
-    fetch_board([username, board_name], board, new_bookmark, new_data)
-  end
-
-  defp user_link_query_params(bookmark, uname) do
+  defp query_params(bookmark, uname) do
     options = %{
       "isPrefetch" => false,
       "privacy_filter" => "all",
@@ -249,30 +217,17 @@ defmodule Pinbacker.Metadata do
       "redux_normalize_feed" => true
     }
 
-    options =
-      case bookmark do
-        nil -> options
-        bm -> Map.merge(options, %{"bookmarks" => [bm]})
-      end
-
-    %{
-      "source_url" => uname,
-      "data" =>
-        JSON.encode!(%{
-          "options" => options,
-          "context" => %{}
-        })
-    }
+    wrap_query_params(options, bookmark)
   end
 
-  def fetch_user(_, ["-end-"], data) do
+  def fetch_board(_, _, ["-end-"], data) do
     data
   end
 
-  def fetch_user([username], bookmark, data) do
-    url = "https://www.pinterest.com/resource/BoardsResource/get/"
-
-    params = user_link_query_params(bookmark, username)
+  def fetch_board([username, board_name], board, bookmark, data) do
+    # recursively fetch all the pins for a section
+    url = "https://www.pinterest.com/resource/BoardFeedResource/get/"
+    params = query_params(bookmark, board)
 
     {:ok, new_data, new_bookmark} =
       with {:ok, json_string} <- HTTP.get(:img, url, params),
@@ -284,9 +239,28 @@ defmodule Pinbacker.Metadata do
         {:error, error} -> {:error, error}
       end
 
-    IO.write(".")
+    fetch_board([username, board_name], board, new_bookmark, new_data)
+  end
+
+  def fetch_user(_, ["-end-"], data) do
+    data
+  end
+
+  def fetch_user([username], bookmark, data) do
+    url = "https://www.pinterest.com/resource/BoardsResource/get/"
+
+    params = query_params(bookmark, username)
+
+    {:ok, new_data, new_bookmark} =
+      with {:ok, json_string} <- HTTP.get(:img, url, params),
+           {:ok, json} <- JSON.decode(json_string) do
+        new_data = json["resource_response"]["data"] ++ data
+        new_bookmark = json["resource"]["options"]["bookmarks"]
+        {:ok, new_data, new_bookmark}
+      else
+        {:error, error} -> {:error, error}
+      end
+
     fetch_user([username], new_bookmark, new_data)
   end
 end
-
-# Pinbacker.Metadata(["atulvinayak", "sys1", "art-sonstige"], nil)

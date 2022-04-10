@@ -26,7 +26,8 @@ defmodule Pinbacker.MixProject do
       {:floki, "~> 0.32.0"},
       {:json, "~> 1.4.1"},
       {:httpoison, "~> 1.8"},
-      {:retry, "~> 0.15"}
+      {:retry, "~> 0.15"},
+      {:credo, "~> 1.6", only: [:dev, :test], runtime: false}
     ]
   end
 end

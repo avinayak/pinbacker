@@ -45,10 +45,11 @@ defmodule MetadataTest do
                     id: "1090152722239571253",
                     name: "Analog",
                     section_count: 1,
-                    url: "/atulsvinayak/analog/"
+                    url: "/atulsvinayak/analog/",
+                    type: :board
                   }
                 ],
-                [%{id: "5225236608711713313", slug: "outdoor", title: "Outdoor"}]
+                [%{id: "5225236608711713313", slug: "outdoor", title: "Outdoor", type: :section}]
               ]}
   end
 
@@ -61,7 +62,8 @@ defmodule MetadataTest do
                     id: "1090152722239571260",
                     name: "Portraits",
                     section_count: 0,
-                    url: "/atulsvinayak/portraits/"
+                    url: "/atulsvinayak/portraits/",
+                    type: :board
                   }
                 ],
                 []
