@@ -5,6 +5,8 @@ defmodule Pinbacker.Metadata do
 
   alias Pinbacker.HTTP
 
+  require Logger
+
   def fetch_script_with_json(url) do
     with {:ok, body} <- HTTP.get(:pin, url),
          {:ok, document} <- Floki.parse_document(body),
@@ -72,7 +74,7 @@ defmodule Pinbacker.Metadata do
         fetch_section([username, board_name, section_name], section, nil, [])
         |> Enum.filter(&(&1["type"] == "pin"))
 
-      IO.puts("Found #{length(pins)} pins in #{board_name} #{section_name}..")
+      Logger.info("Found #{length(pins)} pins in #{board_name} #{section_name}..")
 
       {:ok, board_name, section_name,
        %{
@@ -104,6 +106,7 @@ defmodule Pinbacker.Metadata do
       boards_metadata =
         boards
         |> Map.keys()
+        |> Enum.filter(fn board_id -> !is_nil(boards[board_id]["collaborating_users"]) end)
         |> Enum.map(
           &%{
             url: boards[&1]["url"],

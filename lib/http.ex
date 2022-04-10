@@ -4,6 +4,8 @@ defmodule Pinbacker.HTTP do
   takes version number as input
   """
 
+  require Logger
+
   @user_agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.0.0 Safari/537.36"
   @versions [nil, "c643827", "4c8c36f"]
 
@@ -85,7 +87,7 @@ defmodule Pinbacker.HTTP do
     else
       File.touch!(filename)
       file = File.open!(filename, [:append])
-      IO.puts("Downloading to #{filename}")
+      Logger.info("Downloading to #{filename}")
 
       %HTTPoison.AsyncResponse{id: ref} =
         HTTPoison.get!(file_url, headers(header_version), stream_to: self())
