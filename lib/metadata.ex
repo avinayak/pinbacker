@@ -22,9 +22,9 @@ defmodule Pinbacker.Metadata do
     end
   end
 
-  def board_slug(url) do
-    url |> String.trim("/") |> String.split("/") |> Enum.at(-1)
-  end
+  def board_slug(url), do: url |> String.trim("/") |> String.split("/") |> Enum.at(-1)
+
+  def discard_non_pin_data(data), do: Enum.filter(data, &(&1["type"] == "pin"))
 
   def fetch_board_pins(board, section_pins) do
     case board do
@@ -35,15 +35,16 @@ defmodule Pinbacker.Metadata do
         {:ok, board.name,
          %{
            board_pins:
-             fetch_pins(@board_meta_enpoint, board, nil, [])
-             |> Enum.filter(&(&1["type"] == "pin")),
+             @board_meta_enpoint
+             |> pintrest_api(board, nil, [])
+             |> discard_non_pin_data,
            section_pins: section_pins
          }}
     end
   end
 
   def get_links(:username, [username]) do
-    boards = fetch_pins(@user_meta_endpoint, [username], nil, [])
+    boards = pintrest_api(@user_meta_endpoint, [username], nil, [])
     Enum.map(boards, &Map.put(&1, "slug", board_slug(Map.get(&1, "url"))))
   end
 
@@ -62,8 +63,9 @@ defmodule Pinbacker.Metadata do
           sections
           |> Enum.map(fn section ->
             {section.slug,
-             fetch_pins(@section_meta_endpoint, section, nil, [])
-             |> Enum.filter(&(&1["type"] == "pin"))}
+             @section_meta_endpoint
+             |> pintrest_api(section, nil, [])
+             |> discard_non_pin_data}
           end)
           |> Map.new()
 
@@ -82,8 +84,9 @@ defmodule Pinbacker.Metadata do
         [section] = sections |> Enum.filter(&(&1.slug == section_name))
 
         pins =
-          fetch_pins(@section_meta_endpoint, section, nil, [])
-          |> Enum.filter(&(&1["type"] == "pin"))
+          @section_meta_endpoint
+          |> pintrest_api(section, nil, [])
+          |> discard_non_pin_data()
 
         Logger.info("Found #{length(pins)} pins in #{board_name} #{section_name}..")
 
@@ -200,11 +203,9 @@ defmodule Pinbacker.Metadata do
     }
   end
 
-  def fetch_pins(_, _, ["-end-"], data) do
-    data
-  end
+  def pintrest_api(_, _, ["-end-"], data), do: data
 
-  def fetch_pins(url, section, bookmark, data) do
+  def pintrest_api(url, section, bookmark, data) do
     params = query_params(section) |> wrap_query_params(bookmark)
 
     {:ok, new_data, new_bookmark} =
@@ -217,6 +218,6 @@ defmodule Pinbacker.Metadata do
         {:error, error} -> {:error, error}
       end
 
-    fetch_pins(url, section, new_bookmark, new_data)
+    pintrest_api(url, section, new_bookmark, new_data)
   end
 end
