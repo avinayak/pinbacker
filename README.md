@@ -4,7 +4,7 @@ An Elixir library/CLI to backup your Pintrest pins
 
 ## Installation
 
-If [available in Hex](https://hex.pm/packages/pinbacker), the package can be installed
+[available in Hex](https://hex.pm/packages/pinbacker), the package can be installed
 by adding `pinbacker` to your list of dependencies in `mix.exs`:
 
 ```elixir
