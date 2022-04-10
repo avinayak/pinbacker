@@ -83,7 +83,7 @@ defmodule Pinbacker.HTTP do
   def download!(header_version, file_url, filename) do
     if File.exists?(filename) do
       # File.open!(filename, [:append])
-      IO.write("File Exists #{filename}")
+      Logger.info("File Exists #{filename}")
     else
       File.touch!(filename)
       file = File.open!(filename, [:append])
