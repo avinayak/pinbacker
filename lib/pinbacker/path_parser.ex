@@ -51,6 +51,9 @@ defmodule Pinbacker.PathParser do
 
       [username] ->
         {:ok, :username, username}
+
+      _ ->
+        {:error, @unrecognizable}
     end
   end
 

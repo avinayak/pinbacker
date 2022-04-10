@@ -8,7 +8,6 @@ defmodule Pinbacker do
 
   def fetch(url, parent) do
     case PathParser.parse(url) do
-
       {:ok, :pin, pin_id} ->
         Downloader.save_single_pin(pin_id, parent)
 
@@ -27,13 +26,12 @@ defmodule Pinbacker do
           Downloader.save_board([username, Map.get(board, "slug")], parent)
         end
 
-      _ ->
-        Logger.error("Unsupported URL")
+      {:error, error} ->
+        Logger.error("Error: #{error}")
     end
 
     Logger.info("Done")
 
     true
   end
-
 end
