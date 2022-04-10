@@ -3,7 +3,6 @@ defmodule MetadataTest do
   doctest Pinbacker.Metadata
 
   alias Pinbacker.Metadata
-  alias Pinbacker.Downloader
 
   test "get pin links" do
     assert Metadata.get_links(:pin, "207517495320779226")
