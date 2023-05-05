@@ -7,6 +7,8 @@ defmodule Pinbacker.Metadata do
 
   require Logger
 
+  use Retry.Annotation
+
   @section_meta_endpoint "https://www.pinterest.com/resource/BoardSectionPinsResource/get/"
   @board_meta_enpoint "https://www.pinterest.com/resource/BoardFeedResource/get/"
   @user_meta_endpoint "https://www.pinterest.com/resource/BoardsResource/get/"
@@ -110,7 +112,10 @@ defmodule Pinbacker.Metadata do
     end
   end
 
+  @retry with: exponential_backoff() |> randomize |> expiry(20_000)
   def get_sections_and_boards(url) do
+    Logger.info("Fetching #{url}..")
+
     case fetch_script_with_json(url) do
       {:ok, react_state} ->
         parent = react_state["props"]["initialReduxState"]
@@ -218,6 +223,7 @@ defmodule Pinbacker.Metadata do
         {:error, error} -> {:error, error}
       end
 
+    IO.write(".")
     pintrest_api(url, section, new_bookmark, new_data)
   end
 end

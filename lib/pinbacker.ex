@@ -3,7 +3,7 @@ defmodule Pinbacker do
   Documentation for `Pinbacker`.
   """
 
-  alias Pinbacker.{PathParser, Downloader, Metadata}
+  alias Pinbacker.{PathParser, Downloader, Metadata, PinJsonFetcher}
   require Logger
 
   def fetch(url, parent) do
@@ -33,5 +33,31 @@ defmodule Pinbacker do
     Logger.info("Done")
 
     true
+  end
+
+  def metadata(url) do
+    case PathParser.parse(url) do
+      {:ok, :pin, pin_id} ->
+        PinJsonFetcher.save_single_pin(pin_id)
+
+      {:ok, :section, section_path} ->
+        PinJsonFetcher.save_section(section_path)
+
+      {:ok, :board, board_path} ->
+        PinJsonFetcher.save_board(board_path)
+
+      {:ok, :username, username} ->
+        boards = Metadata.get_links(:username, [username])
+
+        Logger.info("Found #{length(boards)} boards for #{username}..")
+
+        boards
+        |> Enum.map(fn board ->
+          Metadata.get_links(:board, [username, Map.get(board, "slug")])
+        end)
+
+      {:error, error} ->
+        Logger.error("Error: #{error}")
+    end
   end
 end
